@@ -7,28 +7,24 @@ FINAL COMMAND LINE INTERFACE APPLICATION
 import os
 import sys
 
-print(f"Using Python interpreter: {sys.executable}")
-print("Python search paths:")
-for path in sys.path:
-    print("  -", path)
-
 import pandas as pd
 import subprocess
 
-# ✅ Ensure script runs from its own directory
+#  Ensure script runs from its own directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# ✅ Path to Simulation Script & Dataset
+#  Path to Simulation Script & Dataset
 simulation_script_path = os.path.join(script_dir, "ModelScriptsForCLI/simulation_approach.py")
+# used for its individual results - providing correct simulations for prediction.
 dataset_path = os.path.join(script_dir, "Datasets/premier-league-matches.csv")
 
-# ✅ Load Dataset
+#  Loads Dataset
 df = pd.read_csv(dataset_path, encoding="utf-8")
 
-# ✅ Get Unique Team Names
+#  Gets Unique Team Names
 unique_teams = sorted(pd.concat([df["Home"], df["Away"]]).unique())
 
-# ✅ Start Application
+#  Start Application
 print(
     """
     ************************************************************
@@ -47,7 +43,7 @@ print(
     """
 )
 
-# ✅ User Selects Prediction Technique
+#  User Selects Prediction Technique
 model_name = input("Choose a prediction technique \n1. ML \n2. Markov Chains \n3. Simulation \n\n").strip().lower()
 
 if model_name in ["1", "ml"]:
@@ -65,16 +61,18 @@ else:
     print("\n❌ Invalid selection. Please restart and choose a valid prediction technique.")
     exit()
 
-# ✅ Print Team List
+# Prints Team List
 title = "⚽ TEAM NAMES ⚽"
 num_columns = 3
 column_width = 25
 total_width = num_columns * column_width
 
+# prints title for team names
 print("=" * total_width)
 print(title.center(total_width))
 print("=" * total_width)
 
+#loops and keeps track to display all team names available
 for i, team in enumerate(unique_teams, 1):
     print(f"{i:>2}. {team:<{column_width - 5}}", end="")
     if i % num_columns == 0:
@@ -82,8 +80,9 @@ for i, team in enumerate(unique_teams, 1):
 
 print("\n" + "=" * total_width)
 
-# ✅ User Selects Team
+# User Selects Team - must be typed exactly as in the list - or if statement is run
 team_name = input("\nChoose a team from the list above whose statistics you are interested in: ").strip()
+
 
 if team_name not in unique_teams:
     print("\n❌ Invalid team selection. Please restart and choose a valid team.")
@@ -92,7 +91,7 @@ if team_name not in unique_teams:
 print(f"\n✅ Team Selected: {team_name}")
 
 
-# ✅ Function to Run Subprocess
+# Function to Run Subprocess
 def run_subprocess(args):
     """Runs a subprocess with proper error handling."""
     result = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
@@ -101,9 +100,9 @@ def run_subprocess(args):
         print("\n⚠️ Error:\n", result.stderr)
 
 
-# ✅ Loop to Keep Application Running
+#  Loop to Keep Application Running
 while True:
-    # ✅ Show Analysis Options
+    #  Show Analysis Options
     print("\nWhat would you like to analyze for this team?")
     print("1. Does the selected team have a higher chance of winning home or away?")
     print("2. Show who the selected team is versing next and who they versed previously.")
@@ -112,7 +111,7 @@ while True:
 
     user_choice = input("\nEnter your choice (1-4): ").strip()
 
-    # ✅ Handle Each Option
+    #  Handle Each Option
     if user_choice == "1":
         print(f"\n🔍 Analyzing home vs. away performance for {team_name}...\n")
         run_subprocess([sys.executable, simulation_script_path, team_name, "home_away"])
@@ -137,7 +136,7 @@ while True:
         print("\n❌ Invalid choice. Please enter a valid option (1-4).")
         continue
 
-    # ✅ Ask User if They Want to View More Statistics
+    #  Ask User if They Want to View More Statistics
     continue_choice = input("\nWould you like to view more statistics? (yes/no): ").strip().lower()
     if continue_choice in ["no", "n"]:
         print("\n👋 Thank you for using PremierPredict! Goodbye!\n")

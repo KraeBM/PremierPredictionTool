@@ -9,17 +9,19 @@ import numpy as np
 import pandas as pd
 import random
 
-# ✅ Ensure script runs from its own directory
+# Ensures script runs from its own directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(script_dir, "../Datasets/Premier_League_Standings.csv")
 matches_path = os.path.join(script_dir, "../Datasets/premier-league-matches.csv")
 
-# ✅ Load Dataset (Force UTF-8 Encoding)
+# Loads Dataset (Force UTF-8 Encoding)
 data = pd.read_csv(data_path, encoding="utf-8")
 
-# ✅ Compute Historical Performance
+# Computes Historical Performance by Giving much higher importance to last 5 years
+# e.g. 2018 = 1 + (2018-2015)/5 = 1.6 (more important that 2015 which was 1)
 data["SeasonWeight"] = data["Season"].apply(lambda x: 1 if x < 2015 else (1 + (x - 2015) / 5))
 
+# Computes weighted team performance
 team_performance = data.groupby("Team", group_keys=False).apply(lambda x: pd.Series({
     "Weighted_Pts": np.average(x["Pts"], weights=x["SeasonWeight"]),
     "GF": np.average(x["GF"], weights=x["SeasonWeight"]),
@@ -31,7 +33,7 @@ team_performance = data.groupby("Team", group_keys=False).apply(lambda x: pd.Ser
     "Pld": np.average(x["Pld"], weights=x["SeasonWeight"])
 })).reset_index()
 
-# ✅ Ensure Necessary Columns Exist
+#  ensures Necessary Columns Exist and also calculates the teams Strength, Weakness and Win rate
 if "GF" in team_performance and "Pld" in team_performance:
     team_performance["Attack_Strength"] = team_performance["GF"] / team_performance["Pld"]
     team_performance["Defense_Strength"] = team_performance["GA"] / team_performance["Pld"]
@@ -39,15 +41,17 @@ if "GF" in team_performance and "Pld" in team_performance:
 else:
     print("\n❌ ERROR: Columns `GF` or `Pld` missing in dataset!")
 
-# ✅ Convert to Dictionary for Fast Lookup
+# Converts into dictionary for fast lookup for later
 team_stats_dict = team_performance.set_index("Team")[["Attack_Strength", "Defense_Strength", "Win_Rate"]].to_dict(orient="index")
 
-# ✅ Function: Simulate Match Outcome
+# Function which simulates Match Outcome
 def simulate_match(home_team, away_team):
     """Simulates a match outcome using attack/defense strength of teams."""
     if home_team not in team_stats_dict or away_team not in team_stats_dict:
-        return np.random.choice(["H", "D", "A"], p=[1/3, 1/3, 1/3])  # Random fair distribution
-
+        return np.random.choice(["H", "D", "A"], p=[1/3, 1/3, 1/3])  # No data = fair randomised probability of winning.#
+                                                                        # Each outcome has a 1/3 of winning #
+    #Due to introduction of team versing, removing -/+ 5% prevents instability of prediction for every game + improves interpretation
+    # Other version in GOOGLE COLLAB was better for understanding strength of predictability (MAE) and better analysis
     home_attack = team_stats_dict[home_team]["Attack_Strength"]
     away_attack = team_stats_dict[away_team]["Attack_Strength"]
     home_defense = team_stats_dict[home_team]["Defense_Strength"]
@@ -61,7 +65,7 @@ def simulate_match(home_team, away_team):
         return "A"
     return "D"
 
-# ✅ Function: Determine Home vs. Away Performance
+# This fucntion determines Home vs. Away Performance - comparing their strengths
 def analyze_home_away(team_name):
     """Analyzes whether the team performs better at home or away."""
     team_stats = team_stats_dict.get(team_name)
@@ -78,7 +82,7 @@ def analyze_home_away(team_name):
         print(f"\n🚗 {team_name} has a higher chance of winning **AWAY**")
 
 
-# ✅ Function: Show Previous & Predicted Future Matches
+# This fucntion is made to show previous & predicted future matches
 def show_matches(team_name):
     """Displays past matches and predicts future match outcomes based on historical data."""
     df = pd.read_csv(matches_path, encoding="utf-8")
@@ -90,13 +94,12 @@ def show_matches(team_name):
         return
 
     team_matches = df[(df["Home"] == team_name) | (df["Away"] == team_name)][["Date", "Home", "Away"] + goal_columns]
-
-    past_matches = team_matches.dropna().tail(5)  # Last 5 completed matches
-
+    # Last 5 completed matches
+    past_matches = team_matches.dropna().tail(5)
     print(f"\n📅 **Last 5 Matches for {team_name}:**\n")
     print(past_matches.to_string(index=False))
 
-    # Predict Next 5 Matches
+    # Predicts Next 5 Matches
     possible_opponents = df["Home"].unique()
     possible_opponents = [team for team in possible_opponents if team != team_name]
     future_opponents = random.sample(possible_opponents, 5)
@@ -113,7 +116,7 @@ def show_matches(team_name):
         result_text = "🏆 Home Win" if outcome == "H" else "⚖️ Draw" if outcome == "D" else "🚀 Away Win"
         print(f"{home:<20} {away:<20} {result_text:<20}")
 
-# ✅ Function: Simulate Full Season Standings
+# This function simulates Full Season Standings
 def simulate_season(team_name):
     """Simulates an entire Premier League season and checks if the selected team is in the top 10."""
     latest_season = data["Season"].max()
@@ -126,7 +129,7 @@ def simulate_season(team_name):
     for _ in range(num_simulations):
         standings = {team: 0 for team in historical_teams}
 
-        # Simulate matches between teams
+        # Simulates matches between teams
         for home_team in historical_teams:
             for away_team in historical_teams:
                 if home_team != away_team:
@@ -157,7 +160,7 @@ def simulate_season(team_name):
     if team_name not in final_rankings_df.index:
         print(f"\n⚠️ {team_name} is not in the top 10.")
 
-# ✅ Function: Simulate match between 2 teams
+# This function simulates the match between 2 chosen teams
 def simulate_head_to_head(team1, team2):
     """Simulates a match between two teams and predicts the winner using strength-based probabilities."""
     if team1 not in team_stats_dict or team2 not in team_stats_dict:
@@ -168,7 +171,7 @@ def simulate_head_to_head(team1, team2):
     team1_strength = team_stats_dict[team1]["Attack_Strength"] - team_stats_dict[team2]["Defense_Strength"]
     team2_strength = team_stats_dict[team2]["Attack_Strength"] - team_stats_dict[team1]["Defense_Strength"]
 
-    print(f"\n⚔️ Head-to-Head Prediction: {team1} vs {team2}")
+    print(f"\n Head-to-Head Prediction: {team1} vs {team2}")
     print(f"   ⚡ {team1} Strength: {team1_strength:.2f}")
     print(f"   ⚡ {team2} Strength: {team2_strength:.2f}")
 
@@ -198,7 +201,7 @@ def simulate_head_to_head(team1, team2):
     else:
         print(f"\n🏆 **{team2} is more likely to win!**")
 
-# ✅ Execution Block: Ensure This Runs Only When Called from CLI
+# Execution Block  - This ensure this runs only when called from CLI
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("❌ No team or analysis option provided. Please provide both as arguments.")
@@ -223,5 +226,3 @@ if __name__ == "__main__":
         simulate_season(team_name)
     else:
         print("\n❌ Invalid analysis option. Please restart and enter a valid option.")
-
-
